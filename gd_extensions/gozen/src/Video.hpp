@@ -52,6 +52,8 @@ private:
     PackedByteArray byte_array; // Only for video
 
     int response = 0, src_linesize[4] = {0, 0, 0, 0};
+    long start_time_video = 0, start_time_audio = 0, frame_timestamp = 0, current_pts = 0;
+    double average_frame_duration = 0.0, stream_time_base_video = 0.0, stream_time_base_audio = 0.0;
 
 protected:
     bool is_open = false;

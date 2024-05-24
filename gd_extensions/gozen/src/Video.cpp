@@ -110,6 +110,9 @@ void Video::open_video(String a_text)
     // byte_array setup
     byte_array.resize(av_codec_ctx_video->width * av_codec_ctx_video->height * 3);
     src_linesize[0] = av_codec_ctx_video->width * 3;
+    stream_time_base_video = av_q2d(av_stream_video->time_base) * 1000.0 * 10000.0;
+    start_time_video = av_stream_video->start_time != AV_NOPTS_VALUE ? static_cast<long>(av_stream_video->start_time) : 0;
+    average_frame_duration = 10000000.0 / av_q2d(av_stream_video->avg_frame_rate); // eg. 1 sec 25 FPS = 400,000 ticks (40 ms) 
 
     // Audio
     const AVCodec *av_codec_audio = avcodec_find_decoder(av_stream_audio->codecpar->codec_id);
@@ -189,6 +192,9 @@ void Video::open_video(String a_text)
         return;
     }
 
+    stream_time_base_audio = av_q2d(av_stream_audio->time_base) * 1000.0 * 10000.0;
+    start_time_audio = av_stream_audio->start_time != AV_NOPTS_VALUE ? static_cast<long>(av_stream_audio->start_time) : 0;
+
     UtilityFunctions::print("Video opened");
     is_open = true;
 }
@@ -231,7 +237,7 @@ Ref<AudioStreamWAV> Video::get_audio()
         return audio_wav;
     }
 
-    response = av_seek_frame(av_format_ctx, av_stream_audio->index, 0, AVSEEK_FLAG_FRAME | AVSEEK_FLAG_ANY);
+    response = av_seek_frame(av_format_ctx, av_stream_audio->index, start_time_audio, AVSEEK_FLAG_FRAME | AVSEEK_FLAG_ANY);
     avcodec_flush_buffers(av_codec_ctx_audio);
     if (response < 0)
     {
@@ -325,7 +331,80 @@ Ref<AudioStreamWAV> Video::get_audio()
 
 Ref<Image> Video::seek_frame(int a_frame_number)
 {
-    return memnew(Image);
+    Ref<Image> image = memnew(Image);
+    if (!is_open)
+    {
+        UtilityFunctions::printerr("Video not open yet!");
+        return image;
+    }
+
+    frame_timestamp = static_cast<long>(a_frame_number * average_frame_duration);
+
+    av_frame = av_frame_alloc();
+    av_packet = av_packet_alloc();
+
+    response = av_seek_frame(av_format_ctx, av_stream_video->index, (start_time_video + frame_timestamp)/10, AVSEEK_FLAG_FRAME | AVSEEK_FLAG_ANY);
+    avcodec_flush_buffers(av_codec_ctx_video);
+    if (response < 0)
+    {
+        UtilityFunctions::printerr("Error seek to designated frame!");
+        av_frame_free(&av_frame);
+        av_packet_free(&av_packet);
+        return image;
+    }
+
+    while (true)
+    {
+        // demux packet
+        response = av_read_frame(av_format_ctx, av_packet);
+        if (response < 0)
+        {
+            UtilityFunctions::printerr("Error reading frame");
+            break;
+        }
+        if (av_packet->stream_index != av_stream_video->index)
+        {
+            av_packet_unref(av_packet);
+            continue;
+        }
+
+        // send packet for decoding
+        response = avcodec_send_packet(av_codec_ctx_video, av_packet);
+        av_packet_unref(av_packet);
+        if (response != 0)
+            break;
+        
+        // valid packet found, decode frame
+        while (true)
+        {
+            // receive frame
+            response = avcodec_receive_frame(av_codec_ctx_video, av_frame);
+            if (response != 0)
+            {
+                av_frame_unref(av_frame);
+                break;
+            }
+            
+            uint8_t* dest_data[1] = { byte_array.ptrw() };
+            sws_scale(
+                sws_ctx, 
+                av_frame->data, av_frame->linesize, 0, av_codec_ctx_video->height, 
+                dest_data, src_linesize
+            );
+            image->set_data(av_frame->width, av_frame->height, false, Image::Format::FORMAT_RGB8, byte_array);
+
+            av_frame_unref(av_frame);
+            av_frame_free(&av_frame);
+            av_packet_free(&av_packet);
+
+            return image;
+        }
+    }
+
+    av_frame_free(&av_frame);
+    av_packet_free(&av_packet);
+
+    return image;
 }
 
 
