@@ -1,5 +1,27 @@
 #include "Video.hpp"
 
+#include <iostream>
+#include <chrono>
+
+// 定义计时器类
+class Timer {
+public:
+    // 构造函数开始计时
+    Timer() {
+        start_time = std::chrono::high_resolution_clock::now();
+    }
+
+    // 成员函数停止计时并打印用时
+    void stop() {
+        auto end_time = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time).count();
+        UtilityFunctions::print("Time taken: ", duration, " microseconds");
+    }
+
+private:
+    // 计时开始时刻
+    std::chrono::high_resolution_clock::time_point start_time;
+};
 
 void Video::open_video(String a_text)
 {
@@ -111,8 +133,9 @@ void Video::open_video(String a_text)
     byte_array.resize(av_codec_ctx_video->width * av_codec_ctx_video->height * 3);
     src_linesize[0] = av_codec_ctx_video->width * 3;
     stream_time_base_video = av_q2d(av_stream_video->time_base) * 1000.0 * 10000.0;
-    start_time_video = av_stream_video->start_time != AV_NOPTS_VALUE ? static_cast<long>(av_stream_video->start_time) : 0;
-    average_frame_duration = 10000000.0 / av_q2d(av_stream_video->avg_frame_rate); // eg. 1 sec 25 FPS = 400,000 ticks (40 ms) 
+    start_time_video = av_stream_video->start_time != AV_NOPTS_VALUE ? (long)(av_stream_video->start_time) : 0;
+    average_frame_duration = 1000.0 * 10000.0 / av_q2d(av_stream_video->avg_frame_rate); // eg. 1 sec 25 FPS = 400,000 ticks (40 ms) 
+    _get_total_frame_number();
 
     // Audio
     const AVCodec *av_codec_audio = avcodec_find_decoder(av_stream_audio->codecpar->codec_id);
@@ -192,8 +215,8 @@ void Video::open_video(String a_text)
         return;
     }
 
-    stream_time_base_audio = av_q2d(av_stream_audio->time_base) * 1000.0 * 10000.0;
-    start_time_audio = av_stream_audio->start_time != AV_NOPTS_VALUE ? static_cast<long>(av_stream_audio->start_time) : 0;
+    stream_time_base_audio = av_q2d(av_stream_audio->time_base) * 1000.0 * 10000.0; // Converting timebase to ticks
+    start_time_audio = av_stream_audio->start_time != AV_NOPTS_VALUE ? (long)(av_stream_audio->start_time * stream_time_base_audio) : 0;
 
     UtilityFunctions::print("Video opened");
     is_open = true;
@@ -338,12 +361,11 @@ Ref<Image> Video::seek_frame(int a_frame_number)
         return image;
     }
 
-    frame_timestamp = static_cast<long>(a_frame_number * average_frame_duration);
-
     av_frame = av_frame_alloc();
     av_packet = av_packet_alloc();
 
-    response = av_seek_frame(av_format_ctx, av_stream_video->index, (start_time_video + frame_timestamp)/10, AVSEEK_FLAG_FRAME | AVSEEK_FLAG_ANY);
+    frame_timestamp = (long)(a_frame_number * average_frame_duration);
+    response = av_seek_frame(av_format_ctx, av_stream_video->index, (start_time_video + frame_timestamp)/10, AVSEEK_FLAG_FRAME | AVSEEK_FLAG_BACKWARD);
     avcodec_flush_buffers(av_codec_ctx_video);
     if (response < 0)
     {
@@ -357,7 +379,7 @@ Ref<Image> Video::seek_frame(int a_frame_number)
     {
         // demux packet
         response = av_read_frame(av_format_ctx, av_packet);
-        if (response < 0)
+        if (response != 0)
         {
             UtilityFunctions::printerr("Error reading frame");
             break;
@@ -383,6 +405,19 @@ Ref<Image> Video::seek_frame(int a_frame_number)
             {
                 av_frame_unref(av_frame);
                 break;
+            }
+
+            current_pts = av_frame->best_effort_timestamp == AV_NOPTS_VALUE ? av_frame->pts : av_frame->best_effort_timestamp;
+            if (current_pts == AV_NOPTS_VALUE)
+            {
+                av_frame_unref(av_frame);
+                continue;
+            }
+
+            if ((long)(current_pts * stream_time_base_video) / 10000 < frame_timestamp / 10000)
+            {
+                av_frame_unref(av_frame);
+                continue;
             }
             
             uint8_t* dest_data[1] = { byte_array.ptrw() };
@@ -417,14 +452,6 @@ Ref<Image> Video::next_frame()
         return image;
     }
 
-    // response = av_seek_frame(av_format_ctx, av_stream_video->index, 0, AVSEEK_FLAG_FRAME | AVSEEK_FLAG_ANY);
-    // avcodec_flush_buffers(av_codec_ctx_video);
-    // if (response < 0)
-    // {
-    //     UtilityFunctions::printerr("Error seek to the beginning!");
-    //     return image;
-    // }
-
     av_frame = av_frame_alloc();
     av_packet = av_packet_alloc();
 
@@ -483,6 +510,76 @@ Ref<Image> Video::next_frame()
 
 }
 
+
+// av_stream_video->nb_frames 不准。
+void Video::_get_total_frame_number() {
+
+	if (av_stream_video->nb_frames > 500)
+		total_frame_number = av_stream_video->nb_frames - 30;
+
+	av_packet = av_packet_alloc();
+	av_frame = av_frame_alloc();
+
+	// Video seeking
+	frame_timestamp = (long)(total_frame_number * average_frame_duration);
+	response = av_seek_frame(av_format_ctx, av_stream_video->index, (start_time_video + frame_timestamp) / 10, AVSEEK_FLAG_FRAME | AVSEEK_FLAG_BACKWARD);
+
+	avcodec_flush_buffers(av_codec_ctx_video);
+	if (response < 0) {
+		UtilityFunctions::printerr("Can't seek video stream!");
+		av_frame_free(&av_frame);
+		av_packet_free(&av_packet);
+	}
+
+    Timer timer; 
+	while (true) {
+
+        Timer t;
+		// Demux packet
+		response = av_read_frame(av_format_ctx, av_packet);
+		if (response != 0)
+			break;
+		if (av_packet->stream_index != av_stream_video->index) {
+			av_packet_unref(av_packet);
+			continue;
+		}
+
+		// Send packet for decoding
+		response = avcodec_send_packet(av_codec_ctx_video, av_packet);
+		av_packet_unref(av_packet);
+		if (response != 0)
+			break;
+        t.stop();
+
+		// Valid packet found, decode frame
+		while (true) {
+
+			// Receive all frames
+			response = avcodec_receive_frame(av_codec_ctx_video, av_frame);
+			if (response != 0) {
+				av_frame_unref(av_frame);
+				break;
+			}
+
+			// Get frame pts
+			current_pts = av_frame->best_effort_timestamp == AV_NOPTS_VALUE ? av_frame->pts : av_frame->best_effort_timestamp;
+			if (current_pts == AV_NOPTS_VALUE) {
+				av_frame_unref(av_frame);
+				continue;
+			}
+
+			// Skip to actual requested frame
+			if ((long)(current_pts * stream_time_base_video) / 10000 < frame_timestamp / 10000) {
+				av_frame_unref(av_frame);
+				continue;
+			}
+
+			total_frame_number++;
+            // UtilityFunctions::print("Frame number: " + itos(total_frame_number));
+		} 
+	}
+    timer.stop();
+}
 
 void Video::print_av_error(const char *a_message)
 {
