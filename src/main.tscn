@@ -1,6 +1,8 @@
-[gd_scene load_steps=2 format=3 uid="uid://qte6w1wwa5kn"]
+[gd_scene load_steps=3 format=3 uid="uid://qte6w1wwa5kn"]
 
 [ext_resource type="Script" path="res://main.gd" id="1_5nich"]
+
+[sub_resource type="ImageTexture" id="ImageTexture_tpu8t"]
 
 [node name="Main" type="Control"]
 layout_mode = 3
@@ -25,6 +27,7 @@ size_flags_vertical = 3
 
 [node name="TextureRect" type="TextureRect" parent="VBoxContainer/PanelContainer"]
 layout_mode = 2
+texture = SubResource("ImageTexture_tpu8t")
 expand_mode = 1
 stretch_mode = 5
 
@@ -36,5 +39,7 @@ layout_mode = 2
 
 [node name="PlayPauseButton" type="Button" parent="VBoxContainer/HBoxContainer"]
 layout_mode = 2
+size_flags_horizontal = 6
+text = "play/pause"
 
 [node name="AudioStreamPlayer1" type="AudioStreamPlayer" parent="."]

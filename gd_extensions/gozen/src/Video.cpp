@@ -1,5 +1,6 @@
 #include "Video.hpp"
 
+
 void Video::open_video(String a_text)
 {
     UtilityFunctions::print(a_text);
@@ -67,12 +68,48 @@ void Video::open_video(String a_text)
         return;
     }
 
+    // 启用视频多线程解码
+    av_codec_ctx_video->thread_count = 0;
+    // UtilityFunctions::print(av_codec_video->capabilities);
+    if (av_codec_video->capabilities & AV_CODEC_CAP_FRAME_THREADS)
+    {
+        UtilityFunctions::print("Using frame-based threading for video");
+        av_codec_ctx_video->thread_type = FF_THREAD_FRAME;
+    }
+    else if (av_codec_video->capabilities & AV_CODEC_CAP_SLICE_THREADS)
+    {
+        UtilityFunctions::print("Using slice-based threading for video");
+        av_codec_ctx_video->thread_type = FF_THREAD_SLICE;
+    }
+    else
+    {
+        UtilityFunctions::print("Multi-threading not possible for video");
+        av_codec_ctx_video->thread_count = 1; // 多线程不可用
+    }
+
     if (avcodec_open2(av_codec_ctx_video, av_codec_video, NULL) < 0)
     {
         UtilityFunctions::printerr("Error opening codec video");
         close_video();
         return;
     }
+
+    // Setup SWSContext for convert video frame from YUV to RGB
+    sws_ctx = sws_getContext(
+        av_codec_ctx_video->width, av_codec_ctx_video->height, static_cast<AVPixelFormat>(av_stream_video->codecpar->format),
+        av_codec_ctx_video->width, av_codec_ctx_video->height, AV_PIX_FMT_RGB24,
+        SWS_BILINEAR, NULL, NULL, NULL
+    );
+    if (!sws_ctx)
+    {
+        UtilityFunctions::printerr("Error creating SWSContext for video");
+        close_video();
+        return;
+    }
+
+    // byte_array setup
+    byte_array.resize(av_codec_ctx_video->width * av_codec_ctx_video->height * 3);
+    src_linesize[0] = av_codec_ctx_video->width * 3;
 
     // Audio
     const AVCodec *av_codec_audio = avcodec_find_decoder(av_stream_audio->codecpar->codec_id);
@@ -98,22 +135,22 @@ void Video::open_video(String a_text)
         return;
     }
 
-    // 多线程解码
+    // 启用音频多线程解码
     av_codec_ctx_audio->thread_count = 0;
     // UtilityFunctions::print(av_codec_audio->capabilities);
     if (av_codec_audio->capabilities & AV_CODEC_CAP_FRAME_THREADS)
     {
-        UtilityFunctions::print("Using frame-based threading");
+        UtilityFunctions::print("Using frame-based threading for audio");
         av_codec_ctx_audio->thread_type = FF_THREAD_FRAME;
     }
     else if (av_codec_audio->capabilities & AV_CODEC_CAP_SLICE_THREADS)
     {
-        UtilityFunctions::print("Using slice-based threading");
+        UtilityFunctions::print("Using slice-based threading for audio");
         av_codec_ctx_audio->thread_type = FF_THREAD_SLICE;
     }
     else
     {
-        UtilityFunctions::print("Multi-threading not possible");
+        UtilityFunctions::print("Multi-threading not possible for audio");
         av_codec_ctx_audio->thread_count = 1; // 多线程不可用
     }
 
@@ -156,6 +193,7 @@ void Video::open_video(String a_text)
     is_open = true;
 }
 
+
 void Video::close_video()
 {
     is_open = false;
@@ -172,12 +210,16 @@ void Video::close_video()
     if (swr_ctx)
         swr_free(&swr_ctx);
 
+    if (sws_ctx)
+        sws_freeContext(sws_ctx);
+
     if (av_frame)
         av_frame_free(&av_frame);
     
     if (av_packet)
         av_packet_free(&av_packet);
 }
+
 
 Ref<AudioStreamWAV> Video::get_audio()
 {
@@ -279,6 +321,89 @@ Ref<AudioStreamWAV> Video::get_audio()
 
     return audio_wav;
 }
+
+
+Ref<Image> Video::seek_frame(int a_frame_number)
+{
+    return memnew(Image);
+}
+
+
+Ref<Image> Video::next_frame()
+{
+    Ref<Image> image = memnew(Image);
+    if (!is_open)
+    {
+        UtilityFunctions::printerr("Video not open yet!");
+        return image;
+    }
+
+    // response = av_seek_frame(av_format_ctx, av_stream_video->index, 0, AVSEEK_FLAG_FRAME | AVSEEK_FLAG_ANY);
+    // avcodec_flush_buffers(av_codec_ctx_video);
+    // if (response < 0)
+    // {
+    //     UtilityFunctions::printerr("Error seek to the beginning!");
+    //     return image;
+    // }
+
+    av_frame = av_frame_alloc();
+    av_packet = av_packet_alloc();
+
+    while (true)
+    {
+        // demux packet
+        response = av_read_frame(av_format_ctx, av_packet);
+        if (response < 0)
+        {
+            UtilityFunctions::printerr("Error reading frame");
+            break;
+        }
+        if (av_packet->stream_index != av_stream_video->index)
+        {
+            av_packet_unref(av_packet);
+            continue;
+        }
+
+        // send packet for decoding
+        response = avcodec_send_packet(av_codec_ctx_video, av_packet);
+        av_packet_unref(av_packet);
+        if (response != 0)
+            break;
+        
+        // valid packet found, decode frame
+        while (true)
+        {
+            // receive frame
+            response = avcodec_receive_frame(av_codec_ctx_video, av_frame);
+            if (response != 0)
+            {
+                av_frame_unref(av_frame);
+                break;
+            }
+            
+            uint8_t* dest_data[1] = { byte_array.ptrw() };
+            sws_scale(
+                sws_ctx, 
+                av_frame->data, av_frame->linesize, 0, av_codec_ctx_video->height, 
+                dest_data, src_linesize
+            );
+            image->set_data(av_frame->width, av_frame->height, false, Image::Format::FORMAT_RGB8, byte_array);
+
+            av_frame_unref(av_frame);
+            av_frame_free(&av_frame);
+            av_packet_free(&av_packet);
+
+            return image;
+        }
+    }
+
+    av_frame_free(&av_frame);
+    av_packet_free(&av_packet);
+
+    return image;
+
+}
+
 
 void Video::print_av_error(const char *a_message)
 {
