@@ -29,3 +29,6 @@ __pycache__
 *.obj
 *.lib
 *.exp
+
+# FFmpeg
+ffmpeg_bin

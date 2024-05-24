@@ -1,14 +1,49 @@
 import os
+import subprocess
+import platform as os_platform
 
 env = SConscript("../godot_cpp/SConstruct")
 env.Append(CPPPATH=['src'])
-dest_dir = "../../src/bin/gozen/"
+env.Append(LIBS=[
+    'avcodec',
+    'avformat',
+    'avfilter',
+    'avdevice',
+    'avutil',
+    'swscale',
+    'swresample',
+])
+# dest_dir = "../../src/bin/gozen/"
 
 num_jobs = ARGUMENTS.get('jobs', 16)
 platform = ARGUMENTS.get('platform', 'windows')
 
+# if platform == 'windows':
+#     folder_ffmpeg_bin = os.path.join(os.path.dirname(os.path.realpath('__file__')), "ffmpeg_bin")
+#     print(folder_ffmpeg_bin)
+#     os.makedirs(folder_ffmpeg_bin, exist_ok=True)
+#     os.chdir("ffmpeg")
+#     # os.system(f"./configure --prefix={folder_ffmpeg_bin} --enable-gpl --disable-static --enable-shared")
+#     subprocess.run(f"./configure --prefix={folder_ffmpeg_bin} --enable-gpl --enable-shared", shell=True)
+#     os.system(f"make -j {num_jobs}")
+#     os.system(f"make -j {num_jobs} install")
+
+if os_platform.system().lower() == 'windows':
+    env.Append(LIBS=[
+        'avcodec.lib',
+        'avformat.lib',
+        'avfilter.lib',
+        'avdevice.lib',
+        'avutil.lib',
+        'swscale.lib',
+        'swresample.lib',
+    ])
+
+    env.Append(CPPPATH=['ffmpeg_bin/include'])
+    env.Append(LIBPATH=['ffmpeg_bin/bin'])
+
 src = Glob("src/*.cpp")
-libpath = '{}libgozen{}{}'.format(dest_dir, env['suffix'], env['SHLIBSUFFIX'])
+libpath = 'libgozen{}{}'.format(env['suffix'], env['SHLIBSUFFIX'])
 shardlib = env.SharedLibrary(libpath, src)
 
 Default(shardlib)
