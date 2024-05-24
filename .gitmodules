@@ -2,3 +2,7 @@
 	path = gd_extensions/godot_cpp
 	url = https://github.com/godotengine/godot-cpp
 	branch = 4.2
+[submodule "gd_extensions/gozen/ffmpeg"]
+	path = gd_extensions/gozen/ffmpeg
+	url = https://github.com/FFmpeg/FFmpeg
+	branch = release/6.1
