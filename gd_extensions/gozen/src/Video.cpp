@@ -98,6 +98,25 @@ void Video::open_video(String a_text)
         return;
     }
 
+    // 多线程解码
+    av_codec_ctx_audio->thread_count = 0;
+    // UtilityFunctions::print(av_codec_audio->capabilities);
+    if (av_codec_audio->capabilities & AV_CODEC_CAP_FRAME_THREADS)
+    {
+        UtilityFunctions::print("Using frame-based threading");
+        av_codec_ctx_audio->thread_type = FF_THREAD_FRAME;
+    }
+    else if (av_codec_audio->capabilities & AV_CODEC_CAP_SLICE_THREADS)
+    {
+        UtilityFunctions::print("Using slice-based threading");
+        av_codec_ctx_audio->thread_type = FF_THREAD_SLICE;
+    }
+    else
+    {
+        UtilityFunctions::print("Multi-threading not possible");
+        av_codec_ctx_audio->thread_count = 1; // 多线程不可用
+    }
+
     if (avcodec_open2(av_codec_ctx_audio, av_codec_audio, NULL) < 0)
     {
         UtilityFunctions::printerr("Error opening codec audio");
@@ -180,7 +199,8 @@ Ref<AudioStreamWAV> Video::get_audio()
 
     av_frame = av_frame_alloc();
     av_packet = av_packet_alloc();
-    PackedByteArray audio_data;
+    PackedByteArray audio_data = PackedByteArray();
+    size_t audio_size = 0;
 
     while (av_read_frame(av_format_ctx, av_packet) >= 0)
     {
@@ -230,27 +250,16 @@ Ref<AudioStreamWAV> Video::get_audio()
                     av_frame_unref(av_frame);
                     break;
                 }
-
-                if (swr_get_out_samples(swr_ctx, av_frame->nb_samples) != av_new_frame->nb_samples)
-                    UtilityFunctions::printerr("Number of Samples mismatch");
                 
-                // av_new_frame? av_frame?
-                size_t unpadded_line_size = av_new_frame->nb_samples * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
-                std::vector<uint16_t> audio_vector(unpadded_line_size);
-                memcpy(audio_vector.data(), av_new_frame->extended_data[0], unpadded_line_size);
+                size_t frame_byte_size = av_new_frame->nb_samples * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
 
-                byte_array = PackedByteArray();
-                byte_array.resize(unpadded_line_size * 2);
+                if (av_codec_ctx_audio->ch_layout.nb_channels >= 2)
+                    frame_byte_size *= 2;
 
-                uint16_t byte_offset = 0;
-                for (size_t i = 0; i < unpadded_line_size; i++)
-                {
-                    uint16_t value = ((uint16_t *)av_new_frame->extended_data[0])[i];
-                    byte_array.encode_s16(byte_offset, value);
-                    byte_offset += sizeof(uint16_t);
-                }
+                audio_data.resize(audio_size + frame_byte_size);
+                memcpy(audio_data.ptrw() + audio_size, av_new_frame->extended_data[0], frame_byte_size);
+                audio_size += frame_byte_size;              
 
-                audio_data.append_array(byte_array);
                 av_frame_unref(av_frame);
                 av_frame_unref(av_new_frame);
             }
