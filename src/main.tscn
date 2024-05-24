@@ -36,3 +36,5 @@ layout_mode = 2
 
 [node name="PlayPauseButton" type="Button" parent="VBoxContainer/HBoxContainer"]
 layout_mode = 2
+
+[node name="AudioStreamPlayer1" type="AudioStreamPlayer" parent="."]
