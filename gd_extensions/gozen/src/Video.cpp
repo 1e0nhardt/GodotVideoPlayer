@@ -132,9 +132,13 @@ void Video::open_video(String a_text)
     // byte_array setup
     byte_array.resize(av_codec_ctx_video->width * av_codec_ctx_video->height * 3);
     src_linesize[0] = av_codec_ctx_video->width * 3;
-    stream_time_base_video = av_q2d(av_stream_video->time_base) * 1000.0 * 10000.0;
+    stream_time_base_video = av_q2d(av_stream_video->time_base);
     start_time_video = av_stream_video->start_time != AV_NOPTS_VALUE ? (long)(av_stream_video->start_time) : 0;
-    average_frame_duration = 1000.0 * 10000.0 / av_q2d(av_stream_video->avg_frame_rate); // eg. 1 sec 25 FPS = 400,000 ticks (40 ms) 
+    start_time_video *= stream_time_base_video; // convert to pts_time
+    average_frame_duration = 1 / av_q2d(av_stream_video->avg_frame_rate);
+    // UtilityFunctions::print("[color=green]Video time base[/color]: ", stream_time_base_video);
+    // UtilityFunctions::print("[color=green]Video frame rate[/color]: ", av_q2d(av_stream_video->avg_frame_rate));
+    // UtilityFunctions::print("[color=green]Video start time[/color]: ", start_time_video);
     _get_total_frame_number();
 
     // Audio
@@ -215,8 +219,9 @@ void Video::open_video(String a_text)
         return;
     }
 
-    stream_time_base_audio = av_q2d(av_stream_audio->time_base) * 1000.0 * 10000.0; // Converting timebase to ticks
-    start_time_audio = av_stream_audio->start_time != AV_NOPTS_VALUE ? (long)(av_stream_audio->start_time * stream_time_base_audio) : 0;
+    stream_time_base_audio = av_q2d(av_stream_audio->time_base);
+    start_time_audio = av_stream_audio->start_time != AV_NOPTS_VALUE ? (long)(av_stream_audio->start_time) : 0;
+    start_time_audio *= stream_time_base_audio; // convert to pts_time
 
     UtilityFunctions::print("Video opened");
     is_open = true;
@@ -364,8 +369,8 @@ Ref<Image> Video::seek_frame(int a_frame_number)
     av_frame = av_frame_alloc();
     av_packet = av_packet_alloc();
 
-    frame_timestamp = (long)(a_frame_number * average_frame_duration);
-    response = av_seek_frame(av_format_ctx, av_stream_video->index, (start_time_video + frame_timestamp)/10, AVSEEK_FLAG_FRAME | AVSEEK_FLAG_BACKWARD);
+    frame_timestamp = (long)(a_frame_number * average_frame_duration); // pts_time
+    response = av_seek_frame(av_format_ctx, av_stream_video->index, (start_time_video + frame_timestamp) / stream_time_base_video, AVSEEK_FLAG_FRAME | AVSEEK_FLAG_BACKWARD);
     avcodec_flush_buffers(av_codec_ctx_video);
     if (response < 0)
     {
@@ -414,7 +419,7 @@ Ref<Image> Video::seek_frame(int a_frame_number)
                 continue;
             }
 
-            if ((long)(current_pts * stream_time_base_video) / 10000 < frame_timestamp / 10000)
+            if ((long)(current_pts * stream_time_base_video) < frame_timestamp)
             {
                 av_frame_unref(av_frame);
                 continue;
@@ -522,7 +527,11 @@ void Video::_get_total_frame_number() {
 
 	// Video seeking
 	frame_timestamp = (long)(total_frame_number * average_frame_duration);
-	response = av_seek_frame(av_format_ctx, av_stream_video->index, (start_time_video + frame_timestamp) / 10, AVSEEK_FLAG_FRAME | AVSEEK_FLAG_BACKWARD);
+    // UtilityFunctions::print_rich("[color=green]Video nb_frames[/color]: ", av_stream_video->nb_frames);
+    // UtilityFunctions::print_rich("[color=green]Avg frame duration[/color]: ", average_frame_duration);
+    // UtilityFunctions::print_rich("[color=green]Seek from frame timestamp[/color]: ", frame_timestamp);
+    // UtilityFunctions::print_rich("[color=green]Start time video[/color]: ", start_time_video);
+	response = av_seek_frame(av_format_ctx, av_stream_video->index, (start_time_video + frame_timestamp) / stream_time_base_video, AVSEEK_FLAG_FRAME | AVSEEK_FLAG_BACKWARD);
 
 	avcodec_flush_buffers(av_codec_ctx_video);
 	if (response < 0) {
@@ -531,10 +540,8 @@ void Video::_get_total_frame_number() {
 		av_packet_free(&av_packet);
 	}
 
-    Timer timer; 
 	while (true) {
 
-        Timer t;
 		// Demux packet
 		response = av_read_frame(av_format_ctx, av_packet);
 		if (response != 0)
@@ -549,7 +556,6 @@ void Video::_get_total_frame_number() {
 		av_packet_unref(av_packet);
 		if (response != 0)
 			break;
-        t.stop();
 
 		// Valid packet found, decode frame
 		while (true) {
@@ -563,22 +569,21 @@ void Video::_get_total_frame_number() {
 
 			// Get frame pts
 			current_pts = av_frame->best_effort_timestamp == AV_NOPTS_VALUE ? av_frame->pts : av_frame->best_effort_timestamp;
+            // UtilityFunctions::print_rich("[color=red]Frame pts[/color]: ", av_frame->pts);
 			if (current_pts == AV_NOPTS_VALUE) {
 				av_frame_unref(av_frame);
 				continue;
 			}
 
 			// Skip to actual requested frame
-			if ((long)(current_pts * stream_time_base_video) / 10000 < frame_timestamp / 10000) {
+			if ((long)(current_pts * stream_time_base_video) < frame_timestamp) {
 				av_frame_unref(av_frame);
 				continue;
 			}
 
 			total_frame_number++;
-            // UtilityFunctions::print("Frame number: " + itos(total_frame_number));
 		} 
 	}
-    timer.stop();
 }
 
 void Video::print_av_error(const char *a_message)
