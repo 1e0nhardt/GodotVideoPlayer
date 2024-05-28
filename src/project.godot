@@ -13,10 +13,12 @@ config_version=5
 config/name="GodotVideoPlayer"
 config/description="简易视频播放器"
 config/version="0.0.1"
+run/main_scene="res://main.tscn"
 config/use_custom_user_dir=true
 config/custom_user_dir_name="GodotVideoPlayer"
 config/features=PackedStringArray("4.2", "GL Compatibility")
 run/flush_stdout_on_print=true
+run/max_fps=200
 config/icon="res://icon.svg"
 
 [debug]

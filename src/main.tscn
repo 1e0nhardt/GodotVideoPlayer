@@ -42,4 +42,7 @@ layout_mode = 2
 size_flags_horizontal = 6
 text = "play/pause"
 
-[node name="AudioStreamPlayer1" type="AudioStreamPlayer" parent="."]
+[node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="."]
+
+[connection signal="drag_ended" from="VBoxContainer/Timeline" to="." method="_on_timeline_drag_ended"]
+[connection signal="drag_started" from="VBoxContainer/Timeline" to="." method="_on_timeline_drag_started"]

@@ -35,6 +35,7 @@ public:
     Ref<Image> next_frame();
 
     inline int get_total_frame_number() { return total_frame_number; }
+    inline float get_frame_rate() { return av_q2d(av_stream_video->r_frame_rate); }
     void _get_total_frame_number();
 
     Ref<AudioStreamWAV> get_audio();
@@ -68,6 +69,7 @@ protected:
         ClassDB::bind_method(D_METHOD("seek_frame", "a_frame_number"), &Video::seek_frame);
         ClassDB::bind_method(D_METHOD("next_frame"), &Video::next_frame);
         ClassDB::bind_method(D_METHOD("get_total_frame_number"), &Video::get_total_frame_number);
+        ClassDB::bind_method(D_METHOD("get_frame_rate"), &Video::get_frame_rate);
     }
 
 };
