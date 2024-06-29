@@ -136,9 +136,10 @@ void Video::open_video(String a_text)
     start_time_video = av_stream_video->start_time != AV_NOPTS_VALUE ? (long)(av_stream_video->start_time) : 0;
     start_time_video *= stream_time_base_video; // convert to pts_time
     average_frame_duration = 1 / av_q2d(av_stream_video->avg_frame_rate);
-    // UtilityFunctions::print("[color=green]Video time base[/color]: ", stream_time_base_video);
-    // UtilityFunctions::print("[color=green]Video frame rate[/color]: ", av_q2d(av_stream_video->avg_frame_rate));
-    // UtilityFunctions::print("[color=green]Video start time[/color]: ", start_time_video);
+    UtilityFunctions::print_rich("[color=green]Video time base[/color]: ", stream_time_base_video);
+    // UtilityFunctions::print_rich("[color=green]Video time base[/color]: ", stream_time_base_video);
+    // UtilityFunctions::print_rich("[color=green]Video frame rate[/color]: ", av_q2d(av_stream_video->avg_frame_rate));
+    // UtilityFunctions::print_rich("[color=green]Video start time[/color]: ", start_time_video);
     _get_total_frame_number();
 
     // Audio

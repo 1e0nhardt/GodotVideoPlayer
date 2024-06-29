@@ -1,8 +1,28 @@
-[gd_scene load_steps=3 format=3 uid="uid://qte6w1wwa5kn"]
+[gd_scene load_steps=12 format=3 uid="uid://qte6w1wwa5kn"]
 
 [ext_resource type="Script" path="res://main.gd" id="1_5nich"]
+[ext_resource type="FontFile" uid="uid://c3e01jcvkrs83" path="res://assets/fonts/ResourceHanRoundedCN-Medium.ttf" id="2_mlkwp"]
+[ext_resource type="Script" path="res://components/subtitle_edit.gd" id="3_l5vda"]
+[ext_resource type="PackedScene" uid="uid://babnus5m7835d" path="res://components/message_label.tscn" id="3_vngbr"]
+[ext_resource type="Script" path="res://scripts/split_tool_container.gd" id="4_2pi4h"]
+[ext_resource type="Script" path="res://asr_edit.gd" id="4_2skco"]
+[ext_resource type="Script" path="res://scripts/list_edit.gd" id="4_8hykm"]
+[ext_resource type="FontFile" uid="uid://r0x1sncb4xen" path="res://assets/fonts/ResourceHanRoundedCN-Regular.ttf" id="6_5p4re"]
 
 [sub_resource type="ImageTexture" id="ImageTexture_tpu8t"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_0ktk4"]
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_8bqox"]
+bg_color = Color(0.294118, 0.423529, 0.65098, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
 
 [node name="Main" type="Control"]
 layout_mode = 3
@@ -12,8 +32,9 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_5nich")
+message_label_scene = ExtResource("3_vngbr")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="."]
+[node name="HBoxContainer" type="HSplitContainer" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -21,28 +42,349 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="PanelContainer" type="PanelContainer" parent="VBoxContainer"]
+[node name="VideoContainer" type="VSplitContainer" parent="HBoxContainer"]
 layout_mode = 2
-size_flags_vertical = 3
+theme_override_constants/separation = 0
 
-[node name="TextureRect" type="TextureRect" parent="VBoxContainer/PanelContainer"]
+[node name="ViewportPanel" type="PanelContainer" parent="HBoxContainer/VideoContainer"]
+custom_minimum_size = Vector2(1120, 630)
+layout_mode = 2
+
+[node name="VideoCanvas" type="TextureRect" parent="HBoxContainer/VideoContainer/ViewportPanel"]
+unique_name_in_owner = true
 layout_mode = 2
 texture = SubResource("ImageTexture_tpu8t")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Timeline" type="HSlider" parent="VBoxContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer/VideoContainer/ViewportPanel"]
+layout_mode = 2
+size_flags_vertical = 8
+
+[node name="SubtitleLabel" type="Label" parent="HBoxContainer/VideoContainer/ViewportPanel/VBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(1120, 0)
+layout_mode = 2
+size_flags_vertical = 8
+theme_override_colors/font_color = Color(0.85, 0.85, 0.85, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 9
+theme_override_constants/line_spacing = -8
+theme_override_fonts/font = ExtResource("2_mlkwp")
+theme_override_font_sizes/font_size = 36
+text = "字幕"
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 3
+
+[node name="SubtitleLabel2" type="Label" parent="HBoxContainer/VideoContainer/ViewportPanel/VBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(1120, 0)
+layout_mode = 2
+size_flags_vertical = 8
+theme_override_colors/font_color = Color(0.85, 0.85, 0.85, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 9
+theme_override_constants/line_spacing = -8
+theme_override_fonts/font = ExtResource("2_mlkwp")
+theme_override_font_sizes/font_size = 22
+text = "字幕"
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 3
+
+[node name="EditorPanel" type="VBoxContainer" parent="HBoxContainer/VideoContainer"]
 layout_mode = 2
 
-[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer"]
+[node name="PlayControlContainer" type="HBoxContainer" parent="HBoxContainer/VideoContainer/EditorPanel"]
 layout_mode = 2
+theme_override_constants/separation = 0
 
-[node name="PlayPauseButton" type="Button" parent="VBoxContainer/HBoxContainer"]
+[node name="PlayPauseButton" type="Button" parent="HBoxContainer/VideoContainer/EditorPanel/PlayControlContainer"]
+unique_name_in_owner = true
 layout_mode = 2
-size_flags_horizontal = 6
+size_flags_horizontal = 4
 text = "play/pause"
+
+[node name="SpeedButton" type="OptionButton" parent="HBoxContainer/VideoContainer/EditorPanel/PlayControlContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+item_count = 4
+selected = 0
+popup/item_0/text = "1.0"
+popup/item_0/id = 0
+popup/item_1/text = "1.25"
+popup/item_1/id = 1
+popup/item_2/text = "1.5"
+popup/item_2/id = 2
+popup/item_3/text = "2.0"
+popup/item_3/id = 3
+
+[node name="Timeline" type="HSlider" parent="HBoxContainer/VideoContainer/EditorPanel/PlayControlContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+
+[node name="TimeLabel" type="Label" parent="HBoxContainer/VideoContainer/EditorPanel/PlayControlContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "00:00:00/00:00:00"
+
+[node name="HiddenMenuButton" type="MenuButton" parent="HBoxContainer/VideoContainer/EditorPanel/PlayControlContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="TabContainer" type="TabContainer" parent="HBoxContainer/VideoContainer/EditorPanel"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="分割校验" type="VBoxContainer" parent="HBoxContainer/VideoContainer/EditorPanel/TabContainer"]
+layout_mode = 2
+
+[node name="SplitToolContainer" type="HSplitContainer" parent="HBoxContainer/VideoContainer/EditorPanel/TabContainer/分割校验"]
+layout_mode = 2
+size_flags_vertical = 3
+script = ExtResource("4_2pi4h")
+
+[node name="RawTextEdit" type="CodeEdit" parent="HBoxContainer/VideoContainer/EditorPanel/TabContainer/分割校验/SplitToolContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+gutters_draw_line_numbers = true
+script = ExtResource("4_8hykm")
+
+[node name="TranslatedTextEdit" type="CodeEdit" parent="HBoxContainer/VideoContainer/EditorPanel/TabContainer/分割校验/SplitToolContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+gutters_draw_line_numbers = true
+
+[node name="HBoxContainer" type="HBoxContainer" parent="HBoxContainer/VideoContainer/EditorPanel/TabContainer/分割校验"]
+layout_mode = 2
+
+[node name="PrevPage" type="Button" parent="HBoxContainer/VideoContainer/EditorPanel/TabContainer/分割校验/HBoxContainer"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("6_5p4re")
+theme_override_font_sizes/font_size = 24
+text = "上一页"
+
+[node name="PageNumer" type="Label" parent="HBoxContainer/VideoContainer/EditorPanel/TabContainer/分割校验/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_fonts/font = ExtResource("6_5p4re")
+theme_override_font_sizes/font_size = 24
+text = "1/10"
+
+[node name="NextPage" type="Button" parent="HBoxContainer/VideoContainer/EditorPanel/TabContainer/分割校验/HBoxContainer"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("6_5p4re")
+theme_override_font_sizes/font_size = 24
+text = "下一页"
+
+[node name="CopyPage" type="Button" parent="HBoxContainer/VideoContainer/EditorPanel/TabContainer/分割校验/HBoxContainer"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("6_5p4re")
+theme_override_font_sizes/font_size = 24
+text = "复制页"
+
+[node name="Conbine" type="Button" parent="HBoxContainer/VideoContainer/EditorPanel/TabContainer/分割校验/HBoxContainer"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("6_5p4re")
+theme_override_font_sizes/font_size = 24
+text = "合并结果"
+
+[node name="通义千问" type="VBoxContainer" parent="HBoxContainer/VideoContainer/EditorPanel/TabContainer"]
+visible = false
+layout_mode = 2
+
+[node name="ScrollContainer" type="ScrollContainer" parent="HBoxContainer/VideoContainer/EditorPanel/TabContainer/通义千问"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="MessageContainer" type="VBoxContainer" parent="HBoxContainer/VideoContainer/EditorPanel/TabContainer/通义千问/ScrollContainer"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="MessageInputContainer" type="HBoxContainer" parent="HBoxContainer/VideoContainer/EditorPanel/TabContainer/通义千问"]
+layout_mode = 2
+
+[node name="MessageEdit" type="LineEdit" parent="HBoxContainer/VideoContainer/EditorPanel/TabContainer/通义千问/MessageInputContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_fonts/font = ExtResource("2_mlkwp")
+theme_override_font_sizes/font_size = 24
+context_menu_enabled = false
+caret_blink = true
+
+[node name="MessageTypeOption" type="OptionButton" parent="HBoxContainer/VideoContainer/EditorPanel/TabContainer/通义千问/MessageInputContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+item_count = 1
+selected = 0
+popup/item_0/text = "通义千问"
+popup/item_0/id = 0
+
+[node name="SendButton" type="Button" parent="HBoxContainer/VideoContainer/EditorPanel/TabContainer/通义千问/MessageInputContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "发送"
+
+[node name="SubtitleEditPanel" type="VBoxContainer" parent="HBoxContainer"]
+layout_mode = 2
+
+[node name="SubtitleEdit" type="CodeEdit" parent="HBoxContainer/SubtitleEditPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_fonts/font = ExtResource("2_mlkwp")
+theme_override_font_sizes/font_size = 23
+wrap_mode = 1
+gutters_draw_line_numbers = true
+script = ExtResource("3_l5vda")
+
+[node name="ToolsContainer" type="HBoxContainer" parent="HBoxContainer/SubtitleEditPanel"]
+layout_mode = 2
+
+[node name="PrevClipButton" type="Button" parent="HBoxContainer/SubtitleEditPanel/ToolsContainer"]
+layout_mode = 2
+text = "跳转到上
+一个片段"
+
+[node name="NextClipButton" type="Button" parent="HBoxContainer/SubtitleEditPanel/ToolsContainer"]
+layout_mode = 2
+text = "跳转到下
+一个片段"
+
+[node name="CombineNextButton" type="Button" parent="HBoxContainer/SubtitleEditPanel/ToolsContainer"]
+layout_mode = 2
+text = "与下一个
+片段合并"
+
+[node name="ReasrButton" type="Button" parent="HBoxContainer/SubtitleEditPanel/ToolsContainer"]
+layout_mode = 2
+text = "重新生成
+当前片段"
+
+[node name="GotoNextLongSentenceButton" type="Button" parent="HBoxContainer/SubtitleEditPanel/ToolsContainer"]
+layout_mode = 2
+text = "跳转到下
+一个长句"
+
+[node name="RepalceButton" type="Button" parent="HBoxContainer/SubtitleEditPanel/ToolsContainer"]
+visible = false
+layout_mode = 2
+text = "全文替换"
+
+[node name="PathInfoLabel" type="RichTextLabel" parent="HBoxContainer/SubtitleEditPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_fonts/normal_font = ExtResource("2_mlkwp")
+theme_override_font_sizes/normal_font_size = 20
+bbcode_enabled = true
+text = "[table=2]
+[cell border=#fff3]视频路径[/cell][cell border=#fff3]%s[/cell]
+[cell border=#fff3]音频路径[/cell][cell border=#fff3]%s[/cell]
+[cell border=#fff3]字幕路径[/cell][cell border=#fff3]%s[/cell]
+[/table]"
+fit_content = true
 
 [node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="."]
 
-[connection signal="drag_ended" from="VBoxContainer/Timeline" to="." method="_on_timeline_drag_ended"]
-[connection signal="drag_started" from="VBoxContainer/Timeline" to="." method="_on_timeline_drag_started"]
+[node name="SaveFileDialog" type="FileDialog" parent="."]
+access = 2
+filters = PackedStringArray("*.ass; ASS字幕文件")
+use_native_dialog = true
+
+[node name="OpenVideoFileDialog" type="FileDialog" parent="."]
+title = "Open a File"
+ok_button_text = "Open"
+file_mode = 0
+access = 2
+filters = PackedStringArray("*.mp4,*.mkv,*.flv; 视频文件", "*.wav,*.m4a; 音频文件", "*.ass; 字幕文件")
+use_native_dialog = true
+
+[node name="AsrPopupPanel" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="CenterContainer" type="CenterContainer" parent="AsrPopupPanel"]
+layout_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="AsrPopupPanel/CenterContainer"]
+custom_minimum_size = Vector2(1280, 720)
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="AsrEdit" type="TextEdit" parent="AsrPopupPanel/CenterContainer/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_fonts/font = ExtResource("2_mlkwp")
+theme_override_font_sizes/font_size = 28
+text = "[532.96->542.76]所以，女士们，先生们，就是这样了。Baskakjoll （或Baskakjoll，Baskakjoll）的更新版本。
+[542.84->547.64]总之，它在 GitHub 和 itch.io 上免费提供。
+[547.64->548.44]告诉我您的想法。
+[548.44->550.08]在下方留言，去看看吧。
+[550.08->551.04]之后再聊，各位。"
+editable = false
+wrap_mode = 1
+script = ExtResource("4_2skco")
+
+[node name="ProgressBar" type="ProgressBar" parent="AsrPopupPanel/CenterContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 10)
+layout_mode = 2
+theme_override_styles/background = SubResource("StyleBoxFlat_0ktk4")
+theme_override_styles/fill = SubResource("StyleBoxFlat_8bqox")
+value = 50.0
+show_percentage = false
+
+[node name="HBoxContainer" type="HBoxContainer" parent="AsrPopupPanel/CenterContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="TranslateBtton" type="Button" parent="AsrPopupPanel/CenterContainer/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+text = "翻译"
+
+[node name="SplitButton" type="Button" parent="AsrPopupPanel/CenterContainer/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+text = "分割"
+
+[node name="ConfirmBtton" type="Button" parent="AsrPopupPanel/CenterContainer/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+text = "确认"
+
+[node name="AsrPopupCancelButton" type="Button" parent="AsrPopupPanel/CenterContainer/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+text = "取消"
+
+[connection signal="drag_ended" from="HBoxContainer/VideoContainer/EditorPanel/PlayControlContainer/Timeline" to="." method="_on_timeline_drag_ended"]
+[connection signal="drag_started" from="HBoxContainer/VideoContainer/EditorPanel/PlayControlContainer/Timeline" to="." method="_on_timeline_drag_started"]
+[connection signal="text_changed" from="HBoxContainer/VideoContainer/EditorPanel/TabContainer/分割校验/SplitToolContainer/TranslatedTextEdit" to="HBoxContainer/VideoContainer/EditorPanel/TabContainer/分割校验/SplitToolContainer" method="_on_translated_text_edit_text_changed"]
+[connection signal="pressed" from="HBoxContainer/VideoContainer/EditorPanel/TabContainer/分割校验/HBoxContainer/PrevPage" to="HBoxContainer/VideoContainer/EditorPanel/TabContainer/分割校验/SplitToolContainer/RawTextEdit" method="_on_prev_page_pressed"]
+[connection signal="pressed" from="HBoxContainer/VideoContainer/EditorPanel/TabContainer/分割校验/HBoxContainer/NextPage" to="HBoxContainer/VideoContainer/EditorPanel/TabContainer/分割校验/SplitToolContainer/RawTextEdit" method="_on_next_page_pressed"]
+[connection signal="pressed" from="HBoxContainer/VideoContainer/EditorPanel/TabContainer/分割校验/HBoxContainer/CopyPage" to="HBoxContainer/VideoContainer/EditorPanel/TabContainer/分割校验/SplitToolContainer/RawTextEdit" method="_on_copy_page_pressed"]
+[connection signal="pressed" from="HBoxContainer/VideoContainer/EditorPanel/TabContainer/分割校验/HBoxContainer/Conbine" to="." method="_on_conbine_pressed"]
+[connection signal="text_submitted" from="HBoxContainer/VideoContainer/EditorPanel/TabContainer/通义千问/MessageInputContainer/MessageEdit" to="." method="_on_message_edit_text_submitted"]
+[connection signal="pressed" from="HBoxContainer/VideoContainer/EditorPanel/TabContainer/通义千问/MessageInputContainer/SendButton" to="." method="_on_send_button_pressed"]
+[connection signal="pressed" from="HBoxContainer/SubtitleEditPanel/ToolsContainer/PrevClipButton" to="." method="_on_prev_clip_button_pressed"]
+[connection signal="pressed" from="HBoxContainer/SubtitleEditPanel/ToolsContainer/NextClipButton" to="." method="_on_next_clip_button_pressed"]
+[connection signal="pressed" from="HBoxContainer/SubtitleEditPanel/ToolsContainer/CombineNextButton" to="." method="_on_combine_next_button_pressed"]
+[connection signal="pressed" from="HBoxContainer/SubtitleEditPanel/ToolsContainer/ReasrButton" to="." method="_on_reasr_button_pressed"]
+[connection signal="pressed" from="HBoxContainer/SubtitleEditPanel/ToolsContainer/GotoNextLongSentenceButton" to="." method="_on_goto_next_long_sentence_button_pressed"]
+[connection signal="pressed" from="AsrPopupPanel/CenterContainer/VBoxContainer/HBoxContainer/TranslateBtton" to="AsrPopupPanel/CenterContainer/VBoxContainer/AsrEdit" method="_on_translate_btton_pressed"]
+[connection signal="pressed" from="AsrPopupPanel/CenterContainer/VBoxContainer/HBoxContainer/SplitButton" to="AsrPopupPanel/CenterContainer/VBoxContainer/AsrEdit" method="_on_split_button_pressed"]
+[connection signal="pressed" from="AsrPopupPanel/CenterContainer/VBoxContainer/HBoxContainer/ConfirmBtton" to="." method="_on_confirm_btton_pressed"]
+[connection signal="pressed" from="AsrPopupPanel/CenterContainer/VBoxContainer/HBoxContainer/AsrPopupCancelButton" to="." method="_on_asr_popup_cancel_button_pressed"]

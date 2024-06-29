@@ -21,14 +21,26 @@ run/flush_stdout_on_print=true
 run/max_fps=200
 config/icon="res://icon.svg"
 
+[audio]
+
+buses/default_bus_layout="res://assets/default_bus_layout.tres"
+
+[autoload]
+
+Logger="*res://autoloads/logger.gd"
+Utils="*res://autoloads/utils.gd"
+EventBus="*res://autoloads/event_bus.gd"
+WS="*res://autoloads/ws_node.gd"
+Config="*res://autoloads/config.gd"
+
 [debug]
 
 file_logging/enable_file_logging=true
 
 [display]
 
-window/size/viewport_width=1920
-window/size/viewport_height=1080
+window/size/viewport_width=1800
+window/size/viewport_height=1200
 window/vsync/vsync_mode=0
 
 [rendering]

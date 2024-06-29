@@ -2,6 +2,7 @@ import os
 import shutil
 import subprocess
 
+
 def copy_file(src, dst):
     """
     拷贝指定文件到当前目录。
