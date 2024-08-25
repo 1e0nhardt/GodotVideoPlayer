@@ -75,6 +75,15 @@ func export_subtitle_file(filepath: String = "", only_first=false, save_path=tru
 
     var export_file = FileAccess.open(filepath, FileAccess.WRITE)
 
+    # 确保时间不会交错
+    for i in subtitle_clips.size() - 1:
+        if subtitle_clips[i+1].start_time < subtitle_clips[i].end_time:
+            Logger.warn("Clip time intersect at index %d, %s<->%s. Fixed." %\
+                     [i,
+                    Utils.time_float2str(subtitle_clips[i].end_time),
+                    Utils.time_float2str(subtitle_clips[i+1].start_time)])
+            subtitle_clips[i].end = subtitle_clips[i+1].start
+
     var content: String = ""
     if Utils.get_suffix(filepath) == "ass":
         content += Utils.ASS_TEMPLATE

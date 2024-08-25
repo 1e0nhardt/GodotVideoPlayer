@@ -138,8 +138,11 @@ layout_mode = 2
 [node name="TabContainer" type="TabContainer" parent="HBoxContainer/VideoContainer/EditorPanel"]
 layout_mode = 2
 size_flags_vertical = 3
+current_tab = 1
+use_hidden_tabs_for_min_size = true
 
 [node name="分割校验" type="VBoxContainer" parent="HBoxContainer/VideoContainer/EditorPanel/TabContainer"]
+visible = false
 layout_mode = 2
 
 [node name="SplitToolContainer" type="HSplitContainer" parent="HBoxContainer/VideoContainer/EditorPanel/TabContainer/分割校验"]
@@ -195,7 +198,6 @@ theme_override_font_sizes/font_size = 24
 text = "合并结果"
 
 [node name="通义千问" type="VBoxContainer" parent="HBoxContainer/VideoContainer/EditorPanel/TabContainer"]
-visible = false
 layout_mode = 2
 
 [node name="ScrollContainer" type="ScrollContainer" parent="HBoxContainer/VideoContainer/EditorPanel/TabContainer/通义千问"]

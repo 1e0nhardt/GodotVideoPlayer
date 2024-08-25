@@ -43,6 +43,10 @@ window/size/viewport_width=1800
 window/size/viewport_height=1200
 window/vsync/vsync_mode=0
 
+[gui]
+
+theme/custom="res://assets/main_theme.tres"
+
 [rendering]
 
 renderer/rendering_method="gl_compatibility"

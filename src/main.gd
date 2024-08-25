@@ -274,7 +274,7 @@ func _on_goto_next_long_sentence_button_pressed():
 func _on_reasr_button_pressed():
     if subtitle_edit.subtitle_track.num_clips == 0:
         return
-
+    pause_or_play(false)
     WS.send({
         "type": "asr",
         "payload": {
